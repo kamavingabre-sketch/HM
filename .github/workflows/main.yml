@@ -47,7 +47,7 @@ jobs:
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
           Write-Host "==============================================="
-          Write-Host "🎣 HappyMancing — GCRD Deployment"
+          Write-Host "🎣 HappyMancing — GCRD + Mumu Player Deployment"
           Write-Host "💻 OS Version        : $env:ImageOS"
           Write-Host "🧠 Runner Machine    : $env:RUNNER_NAME"
           Write-Host "🏷️ Repository        : $env:GITHUB_REPOSITORY"
@@ -89,6 +89,27 @@ jobs:
               exit 1
           }
 
+      - name: "📥 Download Mumu Player Installer"
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+          
+          # Mumu Player download URL (official website)
+          $mumuUrl = "https://mumu-player.com/download/MemuInstaller.exe"
+          $mumuPath = Join-Path $env:USERPROFILE "Downloads\MemuInstaller.exe"
+          
+          Write-Host "Downloading Mumu Player from: $mumuUrl"
+          try {
+              Invoke-WebRequest -Uri $mumuUrl -OutFile $mumuPath -UseBasicParsing
+              if (Test-Path $mumuPath) {
+                  Write-Host "✅ Mumu Player installer downloaded successfully: $mumuPath"
+              } else {
+                  Write-Host "⚠️ Mumu Player download failed, but continuing..."
+              }
+          } catch {
+              Write-Host "⚠️ Mumu Player download error: $($_.Exception.Message), but continuing..."
+          }
+
       - name: "🎣 HappyMancing GCRD Setup"
         id: setup
         run: |
@@ -105,7 +126,7 @@ jobs:
             powershell.exe -ExecutionPolicy Bypass -File ".\setup.ps1" -GateSecret "$env:HappyMancing_Access_Token"
               
             Write-Host "==============================================="
-            Write-Host "🎣 HappyMancing Windows 10 GCRD"
+            Write-Host "🎣 HappyMancing Windows 10 GCRD + Mumu Player"
             Write-Host "✅ Deployment Completed Successfully"
             Write-Host "==============================================="
           } catch {
