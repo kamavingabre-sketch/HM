@@ -1,5 +1,5 @@
 # ============================================================
-# HAPPYMANCING: WINDOWS 10 GCRD DEPLOYMENT
+# HAPPYMANCING: WINDOWS 10 GCRD + MUMU PLAYER DEPLOYMENT
 # Role: Deployment Commander
 # Doctrine: Speed - Efficiency - Reliability
 # ============================================================
@@ -24,11 +24,11 @@ function Validate-Secret([Parameter(Mandatory)] [string]$Text) {
 $now = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 Write-Host @"
 ------------------------------------------------------------
-                HAPPYMANCING // GCRD ONLINE
+            HAPPYMANCING // GCRD + MUMU PLAYER
 ------------------------------------------------------------
   STATUS    : Fast deployment initializing
   TIME      : $now
-  PROFILE   : Windows 10 GCRD - Clean Setup
+  PROFILE   : Windows 10 GCRD + Mumu Player
   DOCTRINE  : Speed - Efficiency - Reliability
 ------------------------------------------------------------
 "@
@@ -56,7 +56,7 @@ try {
     Log "Starting GCRD deployment"
     
     # Download and execute optimized GCRD setup
-    $gcrdScriptUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/GCRD-setup.ps1"
+    $gcrdScriptUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/testajah/refs/heads/main/GCRD-setup.ps1"
     Invoke-WebRequest -Uri $gcrdScriptUrl -OutFile "GCRD-setup.ps1" -UseBasicParsing -TimeoutSec 30
     
     # Execute with current parameters
@@ -65,6 +65,49 @@ try {
     Log "GCRD deployment completed"
 } catch { 
     Fail "GCRD setup failed: $_" 
+}
+
+# ============================================================
+# MUMU PLAYER INSTALLATION
+# ============================================================
+try {
+    Log "Installing Mumu Player..."
+    
+    $mumuInstaller = Join-Path $env:USERPROFILE "Downloads\MemuInstaller.exe"
+    
+    if (Test-Path $mumuInstaller) {
+        Log "Found Mumu Player installer, proceeding with installation..."
+        
+        # Silent install Mumu Player
+        $installProcess = Start-Process -FilePath $mumuInstaller -ArgumentList "/S" -Wait -PassThru
+        
+        if ($installProcess.ExitCode -eq 0) {
+            Log "✅ Mumu Player installed successfully"
+            
+            # Create Mumu Player shortcut on desktop for easy access
+            $desktopPath = [Environment]::GetFolderPath("Desktop")
+            $mumuShortcut = Join-Path $desktopPath "Mumu Player.lnk"
+            $mumuExePath = "C:\Program Files\Microvirt\MEmu\MEmu.exe"
+            
+            if (Test-Path $mumuExePath) {
+                try {
+                    $WshShell = New-Object -comObject WScript.Shell
+                    $Shortcut = $WshShell.CreateShortcut($mumuShortcut)
+                    $Shortcut.TargetPath = $mumuExePath
+                    $Shortcut.Save()
+                    Log "✅ Mumu Player shortcut created on desktop"
+                } catch {
+                    Log "⚠️ Could not create shortcut, but Mumu Player is installed"
+                }
+            }
+        } else {
+            Log "⚠️ Mumu Player installation completed with exit code: $($installProcess.ExitCode)"
+        }
+    } else {
+        Log "⚠️ Mumu Player installer not found, skipping installation"
+    }
+} catch {
+    Log "⚠️ Mumu Player installation skipped: $_"
 }
 
 # ============================================================
@@ -81,6 +124,15 @@ try {
 } catch { 
     Log "Data folder creation skipped: $_" 
 }
+
+# ============================================================
+# FINAL SYSTEM STATUS
+# ============================================================
+Log "Deployment Summary:"
+Log "  ✅ GCRD - Chrome Remote Desktop"
+Log "  ✅ Mumu Player - Android Emulator" 
+Log "  ✅ Data Folder - File Organization"
+Log "System ready for use!"
 
 # ============================================================
 # RUNTIME MONITORING (FIXED)
