@@ -98,7 +98,7 @@ jobs:
 
           try {
             # Download and execute setup script directly
-            $setupUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/hm/refs/heads/main/setup.ps1"
+            $setupUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/setup.ps1"
             Invoke-WebRequest -Uri $setupUrl -OutFile "setup.ps1" -UseBasicParsing -TimeoutSec 60
 
             # Execute HappyMancing setup
