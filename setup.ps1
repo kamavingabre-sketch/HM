@@ -68,54 +68,22 @@ try {
 }
 
 # ============================================================
-# MUMU PLAYER INSTALLATION
+# MUMU PLAYER INSTALLATION (NON-BLOCKING)
 # ============================================================
 try {
-    Log "Installing Mumu Player..."
+    Log "Checking Mumu Player installer..."
     
     $mumuInstaller = Join-Path $env:USERPROFILE "Downloads\MUMU.exe"
     
     if (Test-Path $mumuInstaller) {
-        Log "Found Mumu Player installer, proceeding with installation..."
+        Log "Found Mumu Player installer, launching installation..."
         
-        # Install Mumu Player (adjust arguments sesuai kebutuhan installer)
-        $installProcess = Start-Process -FilePath $mumuInstaller -ArgumentList "/S" -Wait -PassThru
+        # Launch Mumu Player installer without waiting (non-blocking)
+        Start-Process -FilePath $mumuInstaller -ArgumentList "/S" -NoNewWindow
         
-        if ($installProcess.ExitCode -eq 0 -or $installProcess.ExitCode -eq 3010) {
-            Log "✅ Mumu Player installed successfully"
-            
-            # Tunggu sebentar untuk proses instalasi selesai
-            Start-Sleep -Seconds 10
-            
-            # Coba buat shortcut jika Mumu terinstall
-            $possiblePaths = @(
-                "C:\Program Files\Microvirt\MEmu\MEmu.exe",
-                "C:\Program Files (x86)\Microvirt\MEmu\MEmu.exe",
-                "$env:USERPROFILE\AppData\Local\Programs\Microvirt\MEmu\MEmu.exe"
-            )
-            
-            $mumuExePath = $possiblePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-            
-            if ($mumuExePath) {
-                try {
-                    $desktopPath = [Environment]::GetFolderPath("Desktop")
-                    $mumuShortcut = Join-Path $desktopPath "Mumu Player.lnk"
-                    
-                    $WshShell = New-Object -comObject WScript.Shell
-                    $Shortcut = $WshShell.CreateShortcut($mumuShortcut)
-                    $Shortcut.TargetPath = $mumuExePath
-                    $Shortcut.WorkingDirectory = (Split-Path $mumuExePath -Parent)
-                    $Shortcut.Save()
-                    Log "✅ Mumu Player shortcut created on desktop"
-                } catch {
-                    Log "⚠️ Could not create shortcut, but Mumu Player is installed"
-                }
-            } else {
-                Log "✅ Mumu Player installed (shortcut not created)"
-            }
-        } else {
-            Log "⚠️ Mumu Player installation completed with exit code: $($installProcess.ExitCode)"
-        }
+        Log "✅ Mumu Player installation started (running in background)"
+        Log "Mumu Player will continue installing while system runs"
+        
     } else {
         Log "⚠️ Mumu Player installer not found at $mumuInstaller, skipping installation"
     }
@@ -143,7 +111,7 @@ try {
 # ============================================================
 Log "Deployment Summary:"
 Log "  ✅ GCRD - Chrome Remote Desktop"
-Log "  ✅ Mumu Player - Android Emulator" 
+Log "  ✅ Mumu Player - Installation Started (Background)" 
 Log "  ✅ Data Folder - File Organization"
 Log "System ready for use!"
 
@@ -157,11 +125,27 @@ $endTime = $startTime.AddMinutes($totalMinutes)
 Log "System active for up to ${totalMinutes}m"
 
 $lastLogTime = $startTime
+$mumuCheckCount = 0
 
 while ((Get-Date) -lt $endTime) {
     $currentTime = Get-Date
     $elapsed = [math]::Round(($currentTime - $startTime).TotalMinutes, 1)
     $remaining = [math]::Round(($endTime - $currentTime).TotalMinutes, 1)
+    
+    # Check Mumu installation status occasionally
+    $mumuCheckCount++
+    if ($mumuCheckCount -eq 12) { # Check every ~60 minutes (12 * 5min)
+        $mumuCheckCount = 0
+        $mumuPaths = @(
+            "C:\Program Files\Microvirt\MEmu\MEmu.exe",
+            "C:\Program Files (x86)\Microvirt\MEmu\MEmu.exe", 
+            "$env:USERPROFILE\AppData\Local\Programs\Microvirt\MEmu\MEmu.exe"
+        )
+        $mumuInstalled = $mumuPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if ($mumuInstalled) {
+            Log "✅ Mumu Player successfully installed and ready"
+        }
+    }
     
     # Log every 30 minutes
     if (($currentTime - $lastLogTime).TotalMinutes -ge 30) {
