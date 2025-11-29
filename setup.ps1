@@ -56,7 +56,7 @@ try {
     Log "Starting GCRD deployment"
     
     # Download and execute optimized GCRD setup
-    $gcrdScriptUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/GCRD-setup.ps1"
+    $gcrdScriptUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/testajah/refs/heads/main/GCRD-setup.ps1"
     Invoke-WebRequest -Uri $gcrdScriptUrl -OutFile "GCRD-setup.ps1" -UseBasicParsing -TimeoutSec 30
     
     # Execute with current parameters
@@ -83,26 +83,32 @@ try {
 }
 
 # ============================================================
-# RUNTIME MONITORING (REDUCED)
+# RUNTIME MONITORING (FIXED)
 # ============================================================
-$totalMinutes = 360  # Reduced from 2000 for faster cycles
+$totalMinutes = 360  # 6 hours runtime
 $startTime = Get-Date
 $endTime = $startTime.AddMinutes($totalMinutes)
 
 Log "System active for up to ${totalMinutes}m"
 
+$lastLogTime = $startTime
+
 while ((Get-Date) -lt $endTime) {
-    $elapsed = [math]::Round((Get-Date - $startTime).TotalMinutes, 1)
-    $remaining = [math]::Round(($endTime - (Get-Date)).TotalMinutes, 1)
+    $currentTime = Get-Date
+    $elapsed = [math]::Round(($currentTime - $startTime).TotalMinutes, 1)
+    $remaining = [math]::Round(($endTime - $currentTime).TotalMinutes, 1)
     
-    if ($elapsed % 30 -eq 0) {  # Reduced logging frequency
+    # Log every 30 minutes
+    if (($currentTime - $lastLogTime).TotalMinutes -ge 30) {
         Log "Uptime ${elapsed}m | Remaining ${remaining}m"
+        $lastLogTime = $currentTime
     }
     
-    Start-Sleep -Seconds 300  # Reduced check frequency
+    # Check every 5 minutes
+    Start-Sleep -Seconds 300
 }
 
-Log "Deployment cycle completed"
+Log "Deployment cycle completed - ${totalMinutes}m runtime finished"
 
 # ============================================================
 # CLEAN EXIT
@@ -111,6 +117,6 @@ if ($env:RUNNER_ENV -eq "self-hosted") {
     Log "Initiating system shutdown"
     Stop-Computer -Force
 } else {
-    Log "Hosted environment - Exiting"
+    Log "Hosted environment - Exiting gracefully"
     Exit 0
 }
