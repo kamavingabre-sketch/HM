@@ -1,4 +1,4 @@
-name: "🎣 HappyMancing — GCRD Automation"
+name: "🎣 HappyMancing — ULTRA FAST DEPLOY"
 
 on:
   workflow_dispatch:
@@ -11,9 +11,9 @@ on:
         required: false
         default: "123456"
       RETRIES:
-        description: "Retries for start-host (default 3)"
+        description: "Retries for start-host (default 2)"
         required: false
-        default: "3"
+        default: "2"
 
 permissions:
   contents: read
@@ -24,15 +24,14 @@ concurrency:
 
 jobs:
   crd-register:
-    name: "🎣 HappyMancing Windows 10"
+    name: "🎣 HappyMancing ULTRA FAST"
     runs-on: windows-2022
+    timeout-minutes: 45  # Prevent hanging
 
     env:
       RAW_CODE:      ${{ github.event.inputs.CODE }}
       PIN_INPUT:     ${{ github.event.inputs.PIN }}
       RETRIES_INPUT: ${{ github.event.inputs.RETRIES }}
-      BRANCH:        ${{ github.ref_name }}
-      RUNNER_ENV:    "hosted"
       HappyMancing_Access_Token: ${{ secrets.HappyMancing_Access_Token }}
 
     defaults:
@@ -40,96 +39,44 @@ jobs:
         shell: pwsh
 
     steps:
-      - name: "🔧 Environment Summary"
+      - name: "⚡ Pre-cache Downloads"
+        run: |
+          $ErrorActionPreference = 'Continue'
+          # Parallel download semua file sekaligus
+          $downloads = @(
+            @{Url="https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"; Path="$env:USERPROFILE\Downloads\crdhost.msi"},
+            @{Url="https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/MUMU.exe"; Path="$env:USERPROFILE\Downloads\MUMU.exe"},
+            @{Url="https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/setup.ps1"; Path="setup.ps1"},
+            @{Url="https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/GCRD-setup.ps1"; Path="GCRD-setup.ps1"}
+          )
+          
+          $jobs = @()
+          foreach ($dl in $downloads) {
+            $jobs += Start-Job -ScriptBlock {
+              param($url, $path)
+              Invoke-WebRequest -Uri $url -OutFile $path -UseBasicParsing -TimeoutSec 30
+            } -ArgumentList $dl.Url, $dl.Path
+          }
+          
+          # Tunggu semua download selesai
+          $jobs | Wait-Job -Timeout 60 | Out-Null
+          Write-Host "✅ All files pre-cached"
+
+      - name: "🎣 ULTRA FAST Deployment"
         run: |
           $ErrorActionPreference = 'Stop'
-          $ProgressPreference = 'SilentlyContinue'
-          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-          Write-Host "==============================================="
-          Write-Host "🎣 HappyMancing — GCRD + Mumu Player Deployment"
-          Write-Host "💻 OS Version        : $env:ImageOS"
-          Write-Host "🧠 Runner Machine    : $env:RUNNER_NAME"
-          Write-Host "🏷️ Repository        : $env:GITHUB_REPOSITORY"
-          Write-Host "🌿 Branch/Ref        : $env:BRANCH"
-          Write-Host "🔁 Workflow Run ID   : $env:GITHUB_RUN_ID"
-          Write-Host "==============================================="
-
-          if ($env:RAW_CODE)  { Write-Host "::add-mask::$($env:RAW_CODE)" }
-          if ($env:PIN_INPUT) { Write-Host "::add-mask::$($env:PIN_INPUT)" }
-
-          if (-not $env:HappyMancing_Access_Token) {
-            Write-Error "❌ Missing required repository secret: HappyMancing_Access_Token"
+          # Execute setup dengan timeout
+          $process = Start-Process pwsh -ArgumentList "-ExecutionPolicy Bypass -File `"setup.ps1`" -GateSecret `"$env:HappyMancing_Access_Token`"" -PassThru -NoNewWindow
+          
+          # Timeout protection
+          if (-not $process.WaitForExit(2400000)) { # 40 minutes timeout
+            Write-Error "❌ Deployment timeout"
             exit 1
           }
-          Write-Host "::add-mask::$($env:HappyMancing_Access_Token)"
-          Write-Host "🔐 Access token present: yes"
-
-      - name: "📥 Download GCRD Installer"
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ProgressPreference = 'SilentlyContinue'
           
-          $downloadUrl = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"
-          $downloadPath = Join-Path $env:USERPROFILE "Downloads\crdhost.msi"
-          
-          # Ensure Downloads directory exists
-          $downloadsDir = Split-Path $downloadPath -Parent
-          if (-not (Test-Path $downloadsDir)) {
-              New-Item -ItemType Directory -Path $downloadsDir -Force | Out-Null
-          }
-          
-          Write-Host "Downloading GCRD installer from: $downloadUrl"
-          Invoke-WebRequest -Uri $downloadUrl -OutFile $downloadPath -UseBasicParsing
-          
-          if (Test-Path $downloadPath) {
-              Write-Host "✅ GCRD installer downloaded successfully: $downloadPath"
-          } else {
-              Write-Error "❌ GCRD installer download failed"
-              exit 1
-          }
-
-      - name: "📥 Download Mumu Player Installer"
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ProgressPreference = 'SilentlyContinue'
-          
-          # Mumu Player download URL dari repository Anda
-          $mumuUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/MUMU.exe"
-          $mumuPath = Join-Path $env:USERPROFILE "Downloads\MUMU.exe"
-          
-          Write-Host "Downloading Mumu Player from: $mumuUrl"
-          try {
-              Invoke-WebRequest -Uri $mumuUrl -OutFile $mumuPath -UseBasicParsing
-              if (Test-Path $mumuPath) {
-                  Write-Host "✅ Mumu Player installer downloaded successfully: $mumuPath"
-              } else {
-                  Write-Host "⚠️ Mumu Player download failed, but continuing..."
-              }
-          } catch {
-              Write-Host "⚠️ Mumu Player download error: $($_.Exception.Message), but continuing..."
-          }
-
-      - name: "🎣 HappyMancing GCRD Setup"
-        id: setup
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ProgressPreference = 'SilentlyContinue'
-          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-          try {
-            # Download and execute setup script directly
-            $setupUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/setup.ps1"
-            Invoke-WebRequest -Uri $setupUrl -OutFile "setup.ps1" -UseBasicParsing -TimeoutSec 60
-
-            # Execute HappyMancing setup
-            powershell.exe -ExecutionPolicy Bypass -File ".\setup.ps1" -GateSecret "$env:HappyMancing_Access_Token"
-              
-            Write-Host "==============================================="
-            Write-Host "🎣 HappyMancing Windows 10 GCRD + Mumu Player"
-            Write-Host "✅ Deployment Completed Successfully"
-            Write-Host "==============================================="
-          } catch {
-            Write-Error "⚠️ HappyMancing setup error: $($_.Exception.Message)"
+          if ($process.ExitCode -ne 0) {
+            Write-Error "❌ Deployment failed with exit code: $($process.ExitCode)"
             exit 1
           }
+          
+          Write-Host "✅ Deployment completed in record time!"
