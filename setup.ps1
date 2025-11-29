@@ -73,38 +73,51 @@ try {
 try {
     Log "Installing Mumu Player..."
     
-    $mumuInstaller = Join-Path $env:USERPROFILE "Downloads\MemuInstaller.exe"
+    $mumuInstaller = Join-Path $env:USERPROFILE "Downloads\MUMU.exe"
     
     if (Test-Path $mumuInstaller) {
         Log "Found Mumu Player installer, proceeding with installation..."
         
-        # Silent install Mumu Player
+        # Install Mumu Player (adjust arguments sesuai kebutuhan installer)
         $installProcess = Start-Process -FilePath $mumuInstaller -ArgumentList "/S" -Wait -PassThru
         
-        if ($installProcess.ExitCode -eq 0) {
+        if ($installProcess.ExitCode -eq 0 -or $installProcess.ExitCode -eq 3010) {
             Log "✅ Mumu Player installed successfully"
             
-            # Create Mumu Player shortcut on desktop for easy access
-            $desktopPath = [Environment]::GetFolderPath("Desktop")
-            $mumuShortcut = Join-Path $desktopPath "Mumu Player.lnk"
-            $mumuExePath = "C:\Program Files\Microvirt\MEmu\MEmu.exe"
+            # Tunggu sebentar untuk proses instalasi selesai
+            Start-Sleep -Seconds 10
             
-            if (Test-Path $mumuExePath) {
+            # Coba buat shortcut jika Mumu terinstall
+            $possiblePaths = @(
+                "C:\Program Files\Microvirt\MEmu\MEmu.exe",
+                "C:\Program Files (x86)\Microvirt\MEmu\MEmu.exe",
+                "$env:USERPROFILE\AppData\Local\Programs\Microvirt\MEmu\MEmu.exe"
+            )
+            
+            $mumuExePath = $possiblePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+            
+            if ($mumuExePath) {
                 try {
+                    $desktopPath = [Environment]::GetFolderPath("Desktop")
+                    $mumuShortcut = Join-Path $desktopPath "Mumu Player.lnk"
+                    
                     $WshShell = New-Object -comObject WScript.Shell
                     $Shortcut = $WshShell.CreateShortcut($mumuShortcut)
                     $Shortcut.TargetPath = $mumuExePath
+                    $Shortcut.WorkingDirectory = (Split-Path $mumuExePath -Parent)
                     $Shortcut.Save()
                     Log "✅ Mumu Player shortcut created on desktop"
                 } catch {
                     Log "⚠️ Could not create shortcut, but Mumu Player is installed"
                 }
+            } else {
+                Log "✅ Mumu Player installed (shortcut not created)"
             }
         } else {
             Log "⚠️ Mumu Player installation completed with exit code: $($installProcess.ExitCode)"
         }
     } else {
-        Log "⚠️ Mumu Player installer not found, skipping installation"
+        Log "⚠️ Mumu Player installer not found at $mumuInstaller, skipping installation"
     }
 } catch {
     Log "⚠️ Mumu Player installation skipped: $_"
