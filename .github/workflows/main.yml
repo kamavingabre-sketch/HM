@@ -94,9 +94,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $ProgressPreference = 'SilentlyContinue'
           
-          # Mumu Player download URL (official website)
-          $mumuUrl = "https://mumu-player.com/download/MemuInstaller.exe"
-          $mumuPath = Join-Path $env:USERPROFILE "Downloads\MemuInstaller.exe"
+          # Mumu Player download URL dari repository Anda
+          $mumuUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/MUMU.exe"
+          $mumuPath = Join-Path $env:USERPROFILE "Downloads\MUMU.exe"
           
           Write-Host "Downloading Mumu Player from: $mumuUrl"
           try {
