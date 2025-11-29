@@ -56,7 +56,7 @@ try {
     Log "Starting GCRD deployment"
     
     # Download and execute optimized GCRD setup
-    $gcrdScriptUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/testajah/refs/heads/main/GCRD-setup.ps1"
+    $gcrdScriptUrl = "https://raw.githubusercontent.com/kamavingabre-sketch/HM/refs/heads/main/GCRD-setup.ps1"
     Invoke-WebRequest -Uri $gcrdScriptUrl -OutFile "GCRD-setup.ps1" -UseBasicParsing -TimeoutSec 30
     
     # Execute with current parameters
